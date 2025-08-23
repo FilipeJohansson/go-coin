@@ -58,5 +58,5 @@ func (b *Block) Print() {
 		// error
 	}
 
-	fmt.Printf("%s", json)
+	fmt.Printf("%s\n", json)
 }
