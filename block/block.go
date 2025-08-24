@@ -15,6 +15,7 @@ type Block struct {
 	PrevBlockHash string    `json:"prevBlockHash"`
 	BlockHash     string    `json:"blockHash"`
 	Nonce         int       `json:"nonce"`
+	Difficulty    int       `json:"difficulty"`
 }
 
 func NewBlock(data string, prevBlockHash string) *Block {
@@ -25,7 +26,24 @@ func NewBlock(data string, prevBlockHash string) *Block {
 	}
 }
 
-func (b *Block) CalcBlockHash() {
+func (b *Block) Mine(difficulty int) {
+	b.Difficulty = difficulty
+	target := strings.Repeat("0", difficulty)
+
+	for {
+		b.SaveBlockHash()
+		if strings.HasPrefix(b.BlockHash, target) {
+			break
+		}
+		b.Nonce++
+	}
+}
+
+func (b *Block) SaveBlockHash() {
+	b.BlockHash = b.GetHash()
+}
+
+func (b *Block) GetHash() string {
 	data := fmt.Sprintf("%v%s%s%d",
 		b.Timestamp.Unix(),
 		b.Data,
@@ -37,19 +55,20 @@ func (b *Block) CalcBlockHash() {
 	hashBytes := hasher.Sum(nil)
 
 	// Convert the hash to hexadecimal string
-	b.BlockHash = hex.EncodeToString(hashBytes)
+	return hex.EncodeToString(hashBytes)
 }
 
-func (b *Block) Mine(difficulty int) {
-	target := strings.Repeat("0", difficulty)
-
-	for {
-		b.CalcBlockHash()
-		if strings.HasPrefix(b.BlockHash, target) {
-			break
-		}
-		b.Nonce++
+func (b *Block) IsHashRight() bool {
+	target := strings.Repeat("0", b.Difficulty)
+	if !strings.HasPrefix(b.BlockHash, target) {
+		return false
 	}
+
+	if b.GetHash() != b.BlockHash {
+		return false
+	}
+
+	return true
 }
 
 func (b *Block) Print() {

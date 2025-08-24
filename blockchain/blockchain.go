@@ -29,6 +29,24 @@ func (bc *Blockchain) NewBlock(data string) {
 	bc.Blocks = append(bc.Blocks, newBlock)
 }
 
+func (bc *Blockchain) IsBlockchainValid() bool {
+	for i, b := range bc.Blocks {
+		if i != 0 {
+			if b.PrevBlockHash != bc.Blocks[i-1].BlockHash {
+				return false
+			}
+		} else if b.PrevBlockHash != "" {
+			return false
+		}
+
+		if !b.IsHashRight() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (bc *Blockchain) Print() {
 	for _, b := range bc.Blocks {
 		b.Print()
