@@ -1,11 +1,11 @@
 package blockchain
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"go-bitcoin/block"
 	"go-bitcoin/transaction"
 	"go-bitcoin/wallet"
+	"strconv"
 )
 
 type Blockchain struct {
@@ -25,25 +25,36 @@ func NewBlockchain() *Blockchain {
 	}
 }
 
-func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction, publicKey *ecdsa.PublicKey) {
-	if !wallet.ValidateTransactionSignature(transaction) {
+func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction, w wallet.Wallet) {
+	if !wallet.ValidateTransactionSignature(*transaction) {
 		// err
 		fmt.Printf("[INVALID] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
 		return
 	}
 
-	var bk *block.Block
+	amount, err := strconv.Atoi(transaction.Amount)
+	if err != nil {
+		// err
+		return
+	}
+	walletFunds := bc.getAddressFunds(w.Address)
+	if walletFunds < amount {
+		fmt.Printf("[INSUFFICIENT_FUNDS] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
+		return
+	}
+
+	var b *block.Block
 	if bc.PendingBlock == nil {
 		blockchainLen := len(bc.Blocks)
 		lastBlockchainBlockHash := bc.Blocks[blockchainLen-1].BlockHash
-		bk = block.NewBlock(lastBlockchainBlockHash)
-		bc.PendingBlock = bk
+		b = block.NewBlock(lastBlockchainBlockHash)
+		bc.PendingBlock = b
 	} else {
-		bk = bc.PendingBlock
+		b = bc.PendingBlock
 	}
 
 	fmt.Printf("[VALID] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
-	bk.AddTransaction(transaction)
+	b.AddTransaction(transaction)
 }
 
 func (bc *Blockchain) MineBlock() {
@@ -72,7 +83,7 @@ func (bc *Blockchain) IsBlockchainValid() bool {
 		}
 
 		for _, tx := range b.Transactions {
-			if !wallet.ValidateTransactionSignature(tx) {
+			if !wallet.ValidateTransactionSignature(*tx) {
 				return false
 			}
 		}
@@ -88,4 +99,31 @@ func (bc *Blockchain) Print() string {
 	}
 
 	return formattedBlockchain
+}
+
+func (bc *Blockchain) getAddressFunds(address string) int {
+	var funds int
+	for _, b := range bc.Blocks {
+		for _, tx := range b.Transactions {
+			if tx.To == address {
+				amount, err := strconv.Atoi(tx.Amount)
+				if err != nil {
+					// err
+					continue
+				}
+
+				funds += amount
+			} else if tx.From == address {
+				amount, err := strconv.Atoi(tx.Amount)
+				if err != nil {
+					// err
+					continue
+				}
+
+				funds -= amount
+			}
+		}
+	}
+
+	return funds
 }

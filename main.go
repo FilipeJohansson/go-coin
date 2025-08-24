@@ -31,7 +31,7 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 		"To you, baby",
 	)
 	wallet1.SignTransaction(tx)
-	blockchain.AddTransaction(tx, &wallet1.PublicKey)
+	blockchain.AddTransaction(tx, *wallet1)
 	blockchain.MineBlock()
 
 	tx = wallet2.CreateTransaction(
@@ -40,7 +40,7 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 		"That's your payment",
 	)
 	wallet2.SignTransaction(tx)
-	blockchain.AddTransaction(tx, &wallet2.PublicKey)
+	blockchain.AddTransaction(tx, *wallet2)
 	blockchain.MineBlock()
 
 	tx = wallet3.CreateTransaction(
@@ -48,14 +48,14 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 		"2",
 	)
 	wallet3.SignTransaction(tx)
-	blockchain.AddTransaction(tx, &wallet3.PublicKey)
+	blockchain.AddTransaction(tx, *wallet3)
 	tx = wallet3.CreateTransaction(
 		wallet2.Address,
 		"1",
 		"Paying you that thing",
 	)
 	// wallet3.SignTransaction(tx)
-	blockchain.AddTransaction(tx, &wallet3.PublicKey)
+	blockchain.AddTransaction(tx, *wallet3)
 	blockchain.MineBlock()
 }
 

@@ -80,7 +80,7 @@ func (w *Wallet) Print() string {
 	return fmt.Sprintf("%s\n", json)
 }
 
-func ValidateTransactionSignature(tx *transaction.Transaction) bool {
+func ValidateTransactionSignature(tx transaction.Transaction) bool {
 	if tx.Signature == "" {
 		return false
 	}
