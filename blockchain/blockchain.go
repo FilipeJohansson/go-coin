@@ -13,33 +13,38 @@ type Blockchain struct {
 	PendingBlock *block.Block
 }
 
-func NewBlockchain() *Blockchain {
+func NewBlockchain(genesisWalletAddress string) *Blockchain {
+	blockchain := &Blockchain{}
+
 	genesis := block.NewBlock("", "Genesis block")
+	genesisTx := blockchain.createMiningRewardTransaction(genesisWalletAddress)
+	genesis.AddTransaction(genesisTx)
 	genesis.Mine(2)
 
 	chain := make([]*block.Block, 0)
 	chain = append(chain, genesis)
 
-	return &Blockchain{
-		Blocks: chain,
-	}
+	blockchain.Blocks = chain
+
+	return blockchain
 }
 
 func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction, w wallet.Wallet) {
+
 	if !wallet.ValidateTransactionSignature(*transaction) {
 		// err
 		fmt.Printf("[INVALID] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
 		return
 	}
 
-	amount, err := strconv.Atoi(transaction.Amount)
+	txAmount, err := strconv.Atoi(transaction.Amount)
 	if err != nil {
 		// err
 		return
 	}
-	walletFunds := bc.getAddressFunds(w.Address)
-	if walletFunds < amount {
-		fmt.Printf("[INSUFFICIENT_FUNDS] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
+	walletFunds := bc.GetAddressFunds(w.Address)
+	if walletFunds < txAmount {
+		fmt.Printf("[INSUFFICIENT_FUNDS] %s (%d) -> %s: %s (%s)\n", transaction.From, walletFunds, transaction.To, transaction.Amount, transaction.Message)
 		return
 	}
 
@@ -53,14 +58,17 @@ func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction, w wal
 		b = bc.PendingBlock
 	}
 
-	fmt.Printf("[VALID] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
+	fmt.Printf("[VALID] %s (%d) -> %s: %s (%s)\n", transaction.From, walletFunds, transaction.To, transaction.Amount, transaction.Message)
 	b.AddTransaction(transaction)
 }
 
-func (bc *Blockchain) MineBlock() {
+func (bc *Blockchain) MineBlock(minerAddress string) {
 	if bc.PendingBlock == nil {
 		return
 	}
+
+	miningRewardTx := bc.createMiningRewardTransaction(minerAddress)
+	bc.PendingBlock.AddTransaction(miningRewardTx)
 
 	bc.PendingBlock.Mine(2)
 	bc.Blocks = append(bc.Blocks, bc.PendingBlock)
@@ -92,16 +100,7 @@ func (bc *Blockchain) IsBlockchainValid() bool {
 	return true
 }
 
-func (bc *Blockchain) Print() string {
-	var formattedBlockchain string
-	for _, b := range bc.Blocks {
-		formattedBlockchain += b.Print()
-	}
-
-	return formattedBlockchain
-}
-
-func (bc *Blockchain) getAddressFunds(address string) int {
+func (bc *Blockchain) GetAddressFunds(address string) int {
 	var funds int
 	for _, b := range bc.Blocks {
 		for _, tx := range b.Transactions {
@@ -126,4 +125,21 @@ func (bc *Blockchain) getAddressFunds(address string) int {
 	}
 
 	return funds
+}
+
+func (bc *Blockchain) Print() string {
+	var formattedBlockchain string
+	for _, b := range bc.Blocks {
+		formattedBlockchain += b.Print()
+	}
+
+	return formattedBlockchain
+}
+
+func (bc *Blockchain) createMiningRewardTransaction(address string) *transaction.Transaction {
+	return &transaction.Transaction{
+		From:   "MINING_REWARD",
+		To:     address,
+		Amount: "50",
+	}
 }

@@ -81,6 +81,10 @@ func (w *Wallet) Print() string {
 }
 
 func ValidateTransactionSignature(tx transaction.Transaction) bool {
+	if tx.From == "MINING_REWARD" {
+		return true
+	}
+
 	if tx.Signature == "" {
 		return false
 	}
