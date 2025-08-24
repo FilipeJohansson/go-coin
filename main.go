@@ -8,10 +8,12 @@ import (
 )
 
 func main() {
-	createTestWallet()
+	wallet1 := createTestWallet()
+	wallet2 := createTestWallet()
+	wallet3 := createTestWallet()
 
 	blockchain := blockchain.NewBlockchain()
-	addTestTransactions(blockchain)
+	addTestTransactions(blockchain, wallet1, wallet2, wallet3)
 
 	fmt.Print(blockchain.Print())
 	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
@@ -22,42 +24,38 @@ func main() {
 	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
 }
 
-func addTestTransactions(blockchain *blockchain.Blockchain) {
-	blockchain.AddTransaction(
-		transaction.NewTransaction(
-			"Filipe",
-			"Anabela",
-			"10",
-			"To you, baby",
-		),
+func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wallet, wallet2 *wallet.Wallet, wallet3 *wallet.Wallet) {
+	tx := wallet1.CreateTransaction(
+		wallet2.Address,
+		"10",
+		"To you, baby",
 	)
+	wallet1.SignTransaction(tx)
+	blockchain.AddTransaction(tx, &wallet1.PublicKey)
 	blockchain.MineBlock()
 
-	blockchain.AddTransaction(
-		transaction.NewTransaction(
-			"Anabela",
-			"Maxwell",
-			"5",
-			"That's your payment",
-		),
+	tx = wallet2.CreateTransaction(
+		wallet3.Address,
+		"5",
+		"That's your payment",
 	)
+	wallet2.SignTransaction(tx)
+	blockchain.AddTransaction(tx, &wallet2.PublicKey)
 	blockchain.MineBlock()
 
-	blockchain.AddTransaction(
-		transaction.NewTransaction(
-			"Maxwell",
-			"Duda",
-			"2",
-		),
+	tx = wallet3.CreateTransaction(
+		wallet1.Address,
+		"2",
 	)
-	blockchain.AddTransaction(
-		transaction.NewTransaction(
-			"Maxwell",
-			"Filipe",
-			"2",
-			"Paying you that thing",
-		),
+	wallet3.SignTransaction(tx)
+	blockchain.AddTransaction(tx, &wallet3.PublicKey)
+	tx = wallet3.CreateTransaction(
+		wallet2.Address,
+		"1",
+		"Paying you that thing",
 	)
+	// wallet3.SignTransaction(tx)
+	blockchain.AddTransaction(tx, &wallet3.PublicKey)
 	blockchain.MineBlock()
 }
 
@@ -76,7 +74,8 @@ func addMaliciousChange(blockchain *blockchain.Blockchain) {
 	}
 }
 
-func createTestWallet() {
+func createTestWallet() *wallet.Wallet {
 	wallet := wallet.NewWallet()
 	fmt.Print(wallet.Print())
+	return wallet
 }

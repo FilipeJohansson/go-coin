@@ -13,17 +13,23 @@ import (
 type Block struct {
 	Timestamp     time.Time                  `json:"timestamp"`
 	Transactions  []*transaction.Transaction `json:"transaction"`
+	Message       string                     `json:"message"`
 	PrevBlockHash string                     `json:"prevBlockHash"`
 	BlockHash     string                     `json:"blockHash"`
 	Nonce         int                        `json:"nonce"`
 	Difficulty    int                        `json:"difficulty"`
 }
 
-func NewBlock(prevBlockHash string) *Block {
+func NewBlock(prevBlockHash string, msg ...string) *Block {
+	var message string
+	if len(msg) > 0 {
+		message = msg[0]
+	}
+
 	return &Block{
-		Timestamp: time.Now(),
-		// Transactions:  transactions,
+		Timestamp:     time.Now(),
 		PrevBlockHash: prevBlockHash,
+		Message:       message,
 	}
 }
 

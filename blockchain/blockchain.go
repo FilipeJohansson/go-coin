@@ -1,8 +1,11 @@
 package blockchain
 
 import (
+	"crypto/ecdsa"
+	"fmt"
 	"go-bitcoin/block"
 	"go-bitcoin/transaction"
+	"go-bitcoin/wallet"
 )
 
 type Blockchain struct {
@@ -11,8 +14,7 @@ type Blockchain struct {
 }
 
 func NewBlockchain() *Blockchain {
-	genesis := block.NewBlock("")
-	genesis.AddTransaction(transaction.NewTransaction("", "", "", "Genesis block"))
+	genesis := block.NewBlock("", "Genesis block")
 	genesis.Mine(2)
 
 	chain := make([]*block.Block, 0)
@@ -23,7 +25,13 @@ func NewBlockchain() *Blockchain {
 	}
 }
 
-func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction) {
+func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction, publicKey *ecdsa.PublicKey) {
+	if !wallet.ValidateTransactionSignature(transaction) {
+		// err
+		fmt.Printf("[INVALID] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
+		return
+	}
+
 	var bk *block.Block
 	if bc.PendingBlock == nil {
 		blockchainLen := len(bc.Blocks)
@@ -34,6 +42,7 @@ func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction) {
 		bk = bc.PendingBlock
 	}
 
+	fmt.Printf("[VALID] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
 	bk.AddTransaction(transaction)
 }
 
@@ -60,6 +69,12 @@ func (bc *Blockchain) IsBlockchainValid() bool {
 
 		if !b.IsHashRight() {
 			return false
+		}
+
+		for _, tx := range b.Transactions {
+			if !wallet.ValidateTransactionSignature(tx) {
+				return false
+			}
 		}
 	}
 

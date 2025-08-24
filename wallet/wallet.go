@@ -5,11 +5,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"go-bitcoin/transaction"
 
 	"github.com/btcsuite/btcutil/base58"
-	"golang.org/x/crypto/ripemd160"
 )
 
 type Wallet struct {
@@ -35,6 +36,23 @@ func NewWallet() *Wallet {
 	return wallet
 }
 
+func (w *Wallet) CreateTransaction(to string, amount string, msg ...string) *transaction.Transaction {
+	var message string
+	if len(msg) > 0 {
+		message = msg[0]
+	}
+
+	return transaction.NewTransaction(w.Address, to, amount, w.PublicKey, message)
+}
+
+func (w *Wallet) SignTransaction(tx *transaction.Transaction) {
+	signatureBytes, err := ecdsa.SignASN1(rand.Reader, &w.PrivateKey, tx.GetHash())
+	if err != nil {
+		// err
+	}
+	tx.Signature = hex.EncodeToString(signatureBytes)
+}
+
 func (w *Wallet) GetAddress() string {
 	data := fmt.Sprintf("%s%s", w.PublicKey.X, w.PublicKey.Y)
 
@@ -44,11 +62,7 @@ func (w *Wallet) GetAddress() string {
 	hashBytes := hasher.Sum(nil)
 
 	// Second hash - SHA256
-	hasher.Write(hashBytes)
-	hashBytes = hasher.Sum(nil)
-
-	// Address - RIPEMD160
-	hasher = ripemd160.New()
+	hasher = sha256.New()
 	hasher.Write(hashBytes)
 	addressBytes := hasher.Sum(nil)
 
@@ -64,4 +78,17 @@ func (w *Wallet) Print() string {
 	}
 
 	return fmt.Sprintf("%s\n", json)
+}
+
+func ValidateTransactionSignature(tx *transaction.Transaction) bool {
+	if tx.Signature == "" {
+		return false
+	}
+
+	signature, err := hex.DecodeString(tx.Signature)
+	if err != nil {
+		// err
+		return false
+	}
+	return ecdsa.VerifyASN1(&tx.PublicKey, tx.GetHash(), signature)
 }
