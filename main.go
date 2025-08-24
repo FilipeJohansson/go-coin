@@ -4,10 +4,25 @@ import (
 	"fmt"
 	"go-bitcoin/blockchain"
 	"go-bitcoin/transaction"
+	"go-bitcoin/wallet"
 )
 
 func main() {
+	createTestWallet()
+
 	blockchain := blockchain.NewBlockchain()
+	addTestTransactions(blockchain)
+
+	fmt.Print(blockchain.Print())
+	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
+
+	addMaliciousChange(blockchain)
+
+	fmt.Print(blockchain.Print())
+	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
+}
+
+func addTestTransactions(blockchain *blockchain.Blockchain) {
 	blockchain.AddTransaction(
 		transaction.NewTransaction(
 			"Filipe",
@@ -44,11 +59,9 @@ func main() {
 		),
 	)
 	blockchain.MineBlock()
+}
 
-	fmt.Print(blockchain.Print())
-	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
-
-	// Malicious change
+func addMaliciousChange(blockchain *blockchain.Blockchain) {
 	for i, b := range blockchain.Blocks {
 		if i == 1 {
 			txs := make([]*transaction.Transaction, 0)
@@ -61,7 +74,9 @@ func main() {
 			b.Transactions = txs
 		}
 	}
+}
 
-	fmt.Print(blockchain.Print())
-	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
+func createTestWallet() {
+	wallet := wallet.NewWallet()
+	fmt.Print(wallet.Print())
 }
