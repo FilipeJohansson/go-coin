@@ -5,25 +5,30 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"go-bitcoin/transaction"
 	"strings"
 	"time"
 )
 
 type Block struct {
-	Timestamp     time.Time `json:"timestamp"`
-	Data          string    `json:"data"`
-	PrevBlockHash string    `json:"prevBlockHash"`
-	BlockHash     string    `json:"blockHash"`
-	Nonce         int       `json:"nonce"`
-	Difficulty    int       `json:"difficulty"`
+	Timestamp     time.Time                  `json:"timestamp"`
+	Transactions  []*transaction.Transaction `json:"transaction"`
+	PrevBlockHash string                     `json:"prevBlockHash"`
+	BlockHash     string                     `json:"blockHash"`
+	Nonce         int                        `json:"nonce"`
+	Difficulty    int                        `json:"difficulty"`
 }
 
-func NewBlock(data string, prevBlockHash string) *Block {
+func NewBlock(prevBlockHash string) *Block {
 	return &Block{
-		Timestamp:     time.Now(),
-		Data:          data,
+		Timestamp: time.Now(),
+		// Transactions:  transactions,
 		PrevBlockHash: prevBlockHash,
 	}
+}
+
+func (b *Block) AddTransaction(transaction *transaction.Transaction) {
+	b.Transactions = append(b.Transactions, transaction)
 }
 
 func (b *Block) Mine(difficulty int) {
@@ -46,7 +51,7 @@ func (b *Block) SaveBlockHash() {
 func (b *Block) GetHash() string {
 	data := fmt.Sprintf("%v%s%s%d",
 		b.Timestamp.Unix(),
-		b.Data,
+		b.FormatTransactions(),
 		b.PrevBlockHash,
 		b.Nonce)
 
@@ -71,11 +76,20 @@ func (b *Block) IsHashRight() bool {
 	return true
 }
 
-func (b *Block) Print() {
+func (b *Block) FormatTransactions() string {
+	var formattedTransactions string
+	for _, t := range b.Transactions {
+		formattedTransactions += t.Print()
+	}
+
+	return formattedTransactions
+}
+
+func (b *Block) Print() string {
 	json, err := json.Marshal(b)
 	if err != nil {
 		// error
 	}
 
-	fmt.Printf("%s\n", json)
+	return fmt.Sprintf("%s\n", json)
 }

@@ -2,14 +2,17 @@ package blockchain
 
 import (
 	"go-bitcoin/block"
+	"go-bitcoin/transaction"
 )
 
 type Blockchain struct {
-	Blocks []*block.Block `json:"blocks"`
+	Blocks       []*block.Block `json:"blocks"`
+	PendingBlock *block.Block
 }
 
 func NewBlockchain() *Blockchain {
-	genesis := block.NewBlock("Genesis block data", "")
+	genesis := block.NewBlock("")
+	genesis.AddTransaction(transaction.NewTransaction("", "", "", "Genesis block"))
 	genesis.Mine(2)
 
 	chain := make([]*block.Block, 0)
@@ -20,13 +23,29 @@ func NewBlockchain() *Blockchain {
 	}
 }
 
-func (bc *Blockchain) NewBlock(data string) {
-	blockchainLen := len(bc.Blocks)
-	lastBlockchainBlockHash := bc.Blocks[blockchainLen-1].BlockHash
+func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction) {
+	var bk *block.Block
+	if bc.PendingBlock == nil {
+		blockchainLen := len(bc.Blocks)
+		lastBlockchainBlockHash := bc.Blocks[blockchainLen-1].BlockHash
+		bk = block.NewBlock(lastBlockchainBlockHash)
+		bc.PendingBlock = bk
+	} else {
+		bk = bc.PendingBlock
+	}
 
-	newBlock := block.NewBlock(data, lastBlockchainBlockHash)
-	newBlock.Mine(2)
-	bc.Blocks = append(bc.Blocks, newBlock)
+	bk.AddTransaction(transaction)
+}
+
+func (bc *Blockchain) MineBlock() {
+	if bc.PendingBlock == nil {
+		return
+	}
+
+	bc.PendingBlock.Mine(2)
+	bc.Blocks = append(bc.Blocks, bc.PendingBlock)
+
+	bc.PendingBlock = nil
 }
 
 func (bc *Blockchain) IsBlockchainValid() bool {
@@ -47,8 +66,11 @@ func (bc *Blockchain) IsBlockchainValid() bool {
 	return true
 }
 
-func (bc *Blockchain) Print() {
+func (bc *Blockchain) Print() string {
+	var formattedBlockchain string
 	for _, b := range bc.Blocks {
-		b.Print()
+		formattedBlockchain += b.Print()
 	}
+
+	return formattedBlockchain
 }
