@@ -3,10 +3,10 @@ package blockchain
 import (
 	"fmt"
 
-	"github.com/FilipeJohansson/go-coin/block"
-	"github.com/FilipeJohansson/go-coin/common"
-	"github.com/FilipeJohansson/go-coin/transaction"
-	"github.com/FilipeJohansson/go-coin/wallet"
+	"github.com/FilipeJohansson/go-coin/internal/block"
+	"github.com/FilipeJohansson/go-coin/internal/transaction"
+	"github.com/FilipeJohansson/go-coin/internal/wallet"
+	"github.com/FilipeJohansson/go-coin/pkg/common"
 )
 
 type Blockchain struct {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FilipeJohansson/go-coin/transaction"
+	"github.com/FilipeJohansson/go-coin/internal/transaction"
 )
 
 type Block struct {

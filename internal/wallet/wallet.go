@@ -10,8 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/FilipeJohansson/go-coin/transaction"
-
+	"github.com/FilipeJohansson/go-coin/internal/transaction"
 	"github.com/btcsuite/btcutil/base58"
 )
 

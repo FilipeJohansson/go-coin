@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/FilipeJohansson/go-coin/blockchain"
-	"github.com/FilipeJohansson/go-coin/transaction"
-	"github.com/FilipeJohansson/go-coin/wallet"
+	"github.com/FilipeJohansson/go-coin/internal/blockchain"
+	"github.com/FilipeJohansson/go-coin/internal/transaction"
+	"github.com/FilipeJohansson/go-coin/internal/wallet"
 )
 
 func main() {

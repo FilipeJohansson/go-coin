@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/FilipeJohansson/go-coin/common"
+	"github.com/FilipeJohansson/go-coin/pkg/common"
 )
 
 type Transaction struct {
