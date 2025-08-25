@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"go-bitcoin/transaction"
 	"strings"
 	"time"
+
+	"github.com/FilipeJohansson/go-coin/transaction"
 )
 
 type Block struct {

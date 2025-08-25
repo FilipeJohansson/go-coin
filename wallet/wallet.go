@@ -7,8 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"go-bitcoin/transaction"
+
+	"github.com/FilipeJohansson/go-coin/transaction"
 
 	"github.com/btcsuite/btcutil/base58"
 )
@@ -36,13 +38,26 @@ func NewWallet() *Wallet {
 	return wallet
 }
 
-func (w *Wallet) CreateTransaction(to string, amount string, msg ...string) *transaction.Transaction {
+func (w *Wallet) CreateTransaction(to string, amount float64, msg ...string) (*transaction.Transaction, error) {
+	if amount <= 0 {
+		return nil, errors.New("amount must be positive")
+	}
+
+	if to == "" {
+		return nil, errors.New("recipient address cannot be empty")
+	}
+
 	var message string
 	if len(msg) > 0 {
 		message = msg[0]
 	}
 
-	return transaction.NewTransaction(w.Address, to, amount, w.PublicKey, message)
+	tx, err := transaction.NewTransaction(w.Address, to, amount, w.PublicKey, message)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx, nil
 }
 
 func (w *Wallet) SignTransaction(tx *transaction.Transaction) {

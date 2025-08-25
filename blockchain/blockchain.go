@@ -2,10 +2,11 @@ package blockchain
 
 import (
 	"fmt"
-	"go-bitcoin/block"
-	"go-bitcoin/transaction"
-	"go-bitcoin/wallet"
-	"strconv"
+
+	"github.com/FilipeJohansson/go-coin/block"
+	"github.com/FilipeJohansson/go-coin/common"
+	"github.com/FilipeJohansson/go-coin/transaction"
+	"github.com/FilipeJohansson/go-coin/wallet"
 )
 
 type Blockchain struct {
@@ -30,21 +31,29 @@ func NewBlockchain(genesisWalletAddress string) *Blockchain {
 }
 
 func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction, w wallet.Wallet) {
+	fmt.Printf("%s -> %s:\n", transaction.From, transaction.To)
+	fmt.Printf("Amount: %d\n", transaction.Amount)
+	fmt.Printf("Message: %s\n", transaction.Message)
+
+	if transaction.Amount <= 0 {
+		fmt.Printf("[INVALID] Invalid amount: %d\n", transaction.Amount)
+		return
+	}
+
+	if transaction.From == transaction.To {
+		fmt.Printf("[INVALID] Cannot send to yourself\n")
+		return
+	}
 
 	if !wallet.ValidateTransactionSignature(*transaction) {
 		// err
-		fmt.Printf("[INVALID] %s -> %s: %s (%s)\n", transaction.From, transaction.To, transaction.Amount, transaction.Message)
+		fmt.Print("[INVALID] Transaction signature invalid\n")
 		return
 	}
 
-	txAmount, err := strconv.Atoi(transaction.Amount)
-	if err != nil {
-		// err
-		return
-	}
 	walletFunds := bc.GetAddressFunds(w.Address)
-	if walletFunds < txAmount {
-		fmt.Printf("[INSUFFICIENT_FUNDS] %s (%d) -> %s: %s (%s)\n", transaction.From, walletFunds, transaction.To, transaction.Amount, transaction.Message)
+	if walletFunds < transaction.Amount {
+		fmt.Print("[INVALID] Insuficient funds\n")
 		return
 	}
 
@@ -58,7 +67,7 @@ func (bc *Blockchain) AddTransaction(transaction *transaction.Transaction, w wal
 		b = bc.PendingBlock
 	}
 
-	fmt.Printf("[VALID] %s (%d) -> %s: %s (%s)\n", transaction.From, walletFunds, transaction.To, transaction.Amount, transaction.Message)
+	fmt.Printf("[VALID] %s (%d) -> %s: %d\n", transaction.From, walletFunds, transaction.To, transaction.Amount)
 	b.AddTransaction(transaction)
 }
 
@@ -100,26 +109,14 @@ func (bc *Blockchain) IsBlockchainValid() bool {
 	return true
 }
 
-func (bc *Blockchain) GetAddressFunds(address string) int {
-	var funds int
+func (bc *Blockchain) GetAddressFunds(address string) uint64 {
+	var funds uint64
 	for _, b := range bc.Blocks {
 		for _, tx := range b.Transactions {
 			if tx.To == address {
-				amount, err := strconv.Atoi(tx.Amount)
-				if err != nil {
-					// err
-					continue
-				}
-
-				funds += amount
+				funds += tx.Amount
 			} else if tx.From == address {
-				amount, err := strconv.Atoi(tx.Amount)
-				if err != nil {
-					// err
-					continue
-				}
-
-				funds -= amount
+				funds -= tx.Amount
 			}
 		}
 	}
@@ -140,6 +137,6 @@ func (bc *Blockchain) createMiningRewardTransaction(address string) *transaction
 	return &transaction.Transaction{
 		From:   "MINING_REWARD",
 		To:     address,
-		Amount: "50",
+		Amount: 50 * common.COINS_PER_UNIT,
 	}
 }

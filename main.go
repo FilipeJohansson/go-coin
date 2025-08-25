@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"go-bitcoin/blockchain"
-	"go-bitcoin/transaction"
-	"go-bitcoin/wallet"
+
+	"github.com/FilipeJohansson/go-coin/blockchain"
+	"github.com/FilipeJohansson/go-coin/transaction"
+	"github.com/FilipeJohansson/go-coin/wallet"
 )
 
 func main() {
@@ -29,36 +30,45 @@ func main() {
 }
 
 func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wallet, wallet2 *wallet.Wallet, wallet3 *wallet.Wallet) {
-	tx := wallet1.CreateTransaction(
+	tx, _ := wallet1.CreateTransaction(
 		wallet2.Address,
-		"10",
+		10,
 		"To you, baby",
 	)
 	wallet1.SignTransaction(tx)
 	blockchain.AddTransaction(tx, *wallet1)
 	blockchain.MineBlock(wallet1.Address)
 
-	tx = wallet2.CreateTransaction(
+	tx, _ = wallet2.CreateTransaction(
 		wallet3.Address,
-		"5",
+		4.5,
 		"That's your payment",
 	)
 	wallet2.SignTransaction(tx)
 	blockchain.AddTransaction(tx, *wallet2)
 	blockchain.MineBlock(wallet1.Address)
 
-	tx = wallet3.CreateTransaction(
+	tx, _ = wallet3.CreateTransaction(
 		wallet1.Address,
-		"2",
+		2,
 	)
 	wallet3.SignTransaction(tx)
 	blockchain.AddTransaction(tx, *wallet3)
-	tx = wallet3.CreateTransaction(
+	tx, _ = wallet3.CreateTransaction(
 		wallet2.Address,
-		"1",
+		1,
 		"Paying you that thing",
 	)
 	// wallet3.SignTransaction(tx)
+	blockchain.AddTransaction(tx, *wallet3)
+	blockchain.MineBlock(wallet1.Address)
+
+	tx, _ = wallet3.CreateTransaction(
+		wallet2.Address,
+		10000,
+		"Paying you that thing",
+	)
+	wallet3.SignTransaction(tx)
 	blockchain.AddTransaction(tx, *wallet3)
 	blockchain.MineBlock(wallet1.Address)
 }
@@ -70,7 +80,7 @@ func addMaliciousChange(blockchain *blockchain.Blockchain) {
 			txs = append(txs, &transaction.Transaction{
 				From:    "Anabela",
 				To:      "Filipe",
-				Amount:  "5",
+				Amount:  5,
 				Message: "I STOLE!",
 			})
 			b.Transactions = txs
