@@ -13,7 +13,7 @@ import (
 
 type Block struct {
 	Timestamp     time.Time                  `json:"timestamp"`
-	Transactions  []*transaction.Transaction `json:"transaction"`
+	Transactions  []*transaction.Transaction `json:"transactions"`
 	Message       string                     `json:"message"`
 	PrevBlockHash string                     `json:"prevBlockHash"`
 	BlockHash     string                     `json:"blockHash"`
