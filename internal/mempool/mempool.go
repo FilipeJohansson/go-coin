@@ -1,6 +1,10 @@
 package mempool
 
-import "github.com/FilipeJohansson/go-coin/internal/transaction"
+import (
+	"encoding/hex"
+
+	"github.com/FilipeJohansson/go-coin/internal/transaction"
+)
 
 type Mempool struct {
 	PendingTransactions []*transaction.Transaction `json:"pendingTransactions"`
@@ -23,12 +27,12 @@ func (m *Mempool) GetTransactions() []*transaction.Transaction {
 func (m *Mempool) CleanProcessedTransactions(processedTxs []*transaction.Transaction) {
 	processedHashes := make(map[string]bool)
 	for _, tx := range processedTxs {
-		processedHashes[string(tx.GetHash())] = true
+		processedHashes[hex.EncodeToString(tx.GetHash())] = true
 	}
 
 	remaining := make([]*transaction.Transaction, 0)
 	for _, tx := range m.PendingTransactions {
-		if !processedHashes[string(tx.GetHash())] {
+		if !processedHashes[hex.EncodeToString(tx.GetHash())] {
 			remaining = append(remaining, tx)
 		}
 	}
@@ -41,9 +45,9 @@ func (m *Mempool) Size() int {
 }
 
 func (m *Mempool) Contains(tx *transaction.Transaction) bool {
-	targetHash := string(tx.GetHash())
+	targetHash := hex.EncodeToString(tx.GetHash())
 	for _, pendingTx := range m.PendingTransactions {
-		if string(pendingTx.GetHash()) == targetHash {
+		if hex.EncodeToString(pendingTx.GetHash()) == targetHash {
 			return true
 		}
 	}
