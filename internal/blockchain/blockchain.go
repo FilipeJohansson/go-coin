@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/FilipeJohansson/go-coin/internal/block"
+	"github.com/FilipeJohansson/go-coin/internal/mempool"
 	"github.com/FilipeJohansson/go-coin/internal/transaction"
 	"github.com/FilipeJohansson/go-coin/internal/utxo"
 	"github.com/FilipeJohansson/go-coin/internal/wallet"
@@ -12,15 +13,15 @@ import (
 )
 
 type Blockchain struct {
-	Blocks       []*block.Block `json:"blocks"`
-	UTXOSet      *utxo.UTXOSet  `json:"utxoSet"`
-	PendingBlock *block.Block
+	Blocks  []*block.Block   `json:"blocks"`
+	UTXOSet *utxo.UTXOSet    `json:"utxoSet"`
+	Mempool *mempool.Mempool `json:"mempool"`
 }
 
 func NewBlockchain(genesisWalletAddress string) *Blockchain {
 	blockchain := &Blockchain{
-		UTXOSet:      utxo.NewUTXOSet(),
-		PendingBlock: block.NewBlock("", "Genesis block"),
+		UTXOSet: utxo.NewUTXOSet(),
+		Mempool: mempool.NewMempool(),
 	}
 
 	blockchain.MineBlock(genesisWalletAddress)
@@ -47,7 +48,7 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 	fmt.Printf("Message: %s\n", tx.Message)
 
 	if len(tx.Inputs) == 0 {
-		bc.addTxToPendingBlock(tx)
+		bc.Mempool.AddTransaction(tx)
 		return
 	}
 
@@ -94,31 +95,40 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 
 	fmt.Printf("[VALID] %s -> %s: %.2f\n", from, to, amount)
 
-	bc.addTxToPendingBlock(tx)
+	bc.Mempool.AddTransaction(tx)
 }
 
 func (bc *Blockchain) MineBlock(minerAddress string) {
-	if bc.PendingBlock == nil {
+	if bc.Mempool.Size() == 0 && len(bc.Blocks) > 0 {
 		return
 	}
 
-	miningRewardTx := bc.createCoinbaseTransaction(minerAddress)
-	bc.AddTransaction(miningRewardTx)
-	lastTx := bc.PendingBlock.Transactions[len(bc.PendingBlock.Transactions)-1]
-	bc.PendingBlock.Transactions = append(
-		[]*transaction.Transaction{lastTx},
-		bc.PendingBlock.Transactions[:len(bc.PendingBlock.Transactions)-1]...,
-	)
+	var prevHash string
+	if len(bc.Blocks) > 0 {
+		prevHash = bc.Blocks[len(bc.Blocks)-1].BlockHash
+	}
 
-	bc.PendingBlock.Mine(2)
+	newBlock := block.NewBlock(prevHash)
 
-	for _, tx := range bc.PendingBlock.Transactions {
+	transactions := bc.Mempool.GetTransactions()
+	for _, tx := range transactions {
+		newBlock.AddTransaction(tx)
+	}
+
+	coinbaseTx := bc.createCoinbaseTransaction(minerAddress)
+	newBlock.Transactions = append([]*transaction.Transaction{coinbaseTx}, newBlock.Transactions...)
+
+	newBlock.Mine(2)
+	fmt.Printf("[NEW MINED BLOCK]\n%s", newBlock.Print())
+
+	for _, tx := range newBlock.Transactions {
 		bc.updateUTXOSet(tx)
 	}
 
-	bc.Blocks = append(bc.Blocks, bc.PendingBlock)
+	bc.Mempool.CleanProcessedTransactions(newBlock.Transactions)
 
-	bc.PendingBlock = nil
+	bc.Blocks = append(bc.Blocks, newBlock)
+
 }
 
 func (bc *Blockchain) IsBlockchainValid() bool {
@@ -156,20 +166,6 @@ func (bc *Blockchain) Print() string {
 	}
 
 	return formattedBlockchain
-}
-
-func (bc *Blockchain) addTxToPendingBlock(tx *transaction.Transaction) {
-	var b *block.Block
-	if bc.PendingBlock == nil {
-		blockchainLen := len(bc.Blocks)
-		lastBlockchainBlockHash := bc.Blocks[blockchainLen-1].BlockHash
-		b = block.NewBlock(lastBlockchainBlockHash)
-		bc.PendingBlock = b
-	} else {
-		b = bc.PendingBlock
-	}
-
-	b.AddTransaction(tx)
 }
 
 func (bc *Blockchain) createCoinbaseTransaction(address string) *transaction.Transaction {
