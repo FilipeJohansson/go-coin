@@ -4,14 +4,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/FilipeJohansson/go-coin/internal/transaction"
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/FilipeJohansson/go-coin/internal/utxo"
+	"github.com/FilipeJohansson/go-coin/pkg/common"
 )
 
 type Wallet struct {
@@ -37,7 +37,7 @@ func NewWallet() *Wallet {
 	return wallet
 }
 
-func (w *Wallet) CreateTransaction(to string, amount float64, msg ...string) (*transaction.Transaction, error) {
+func (w *Wallet) CreateTransaction(to string, amount float64, utxoSet *utxo.UTXOSet, msg ...string) (*transaction.Transaction, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be positive")
 	}
@@ -51,7 +51,7 @@ func (w *Wallet) CreateTransaction(to string, amount float64, msg ...string) (*t
 		message = msg[0]
 	}
 
-	tx, err := transaction.NewTransaction(w.Address, to, amount, w.PublicKey, message)
+	tx, err := transaction.NewTransaction(w.Address, to, uint64(amount*common.COINS_PER_UNIT), utxoSet, w.PublicKey, message)
 	if err != nil {
 		return nil, err
 	}
@@ -60,28 +60,21 @@ func (w *Wallet) CreateTransaction(to string, amount float64, msg ...string) (*t
 }
 
 func (w *Wallet) SignTransaction(tx *transaction.Transaction) {
-	signatureBytes, err := ecdsa.SignASN1(rand.Reader, &w.PrivateKey, tx.GetHash())
-	if err != nil {
-		// err
+	if tx == nil {
+		return
 	}
-	tx.Signature = hex.EncodeToString(signatureBytes)
+
+	for i := range tx.Inputs {
+		signatureBytes, err := ecdsa.SignASN1(rand.Reader, &w.PrivateKey, tx.Inputs[i].GetHash())
+		if err != nil {
+			// err
+		}
+		tx.Inputs[i].Signature = hex.EncodeToString(signatureBytes)
+	}
 }
 
 func (w *Wallet) GetAddress() string {
-	data := fmt.Sprintf("%s%s", w.PublicKey.X, w.PublicKey.Y)
-
-	// First hash - SHA256
-	hasher := sha256.New()
-	hasher.Write([]byte(data))
-	hashBytes := hasher.Sum(nil)
-
-	// Second hash - SHA256
-	hasher = sha256.New()
-	hasher.Write(hashBytes)
-	addressBytes := hasher.Sum(nil)
-
-	w.Address = base58.Encode(addressBytes)
-
+	w.Address = common.GetAddressFromPublicKey(w.PublicKey)
 	return w.Address
 }
 
@@ -95,18 +88,25 @@ func (w *Wallet) Print() string {
 }
 
 func ValidateTransactionSignature(tx transaction.Transaction) bool {
-	if tx.From == "MINING_REWARD" {
-		return true
+	if len(tx.Inputs) == 0 {
+		return true // Coinbase transaction
 	}
 
-	if tx.Signature == "" {
-		return false
+	for _, i := range tx.Inputs {
+		if i.Signature == "" {
+			return false
+		}
+
+		signature, err := hex.DecodeString(i.Signature)
+		if err != nil {
+			// err
+			return false
+		}
+
+		if !ecdsa.VerifyASN1(&i.PublicKey, i.GetHash(), signature) {
+			return false
+		}
 	}
 
-	signature, err := hex.DecodeString(tx.Signature)
-	if err != nil {
-		// err
-		return false
-	}
-	return ecdsa.VerifyASN1(&tx.PublicKey, tx.GetHash(), signature)
+	return true
 }

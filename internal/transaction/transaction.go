@@ -7,25 +7,38 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/FilipeJohansson/go-coin/pkg/common"
+	"github.com/FilipeJohansson/go-coin/internal/utxo"
 )
 
-type Transaction struct {
-	From      string          `json:"from"`
-	To        string          `json:"to"`
-	Amount    uint64          `json:"amount"`
-	Signature string          `json:"signature"`
-	PublicKey ecdsa.PublicKey `json:"publicKey"`
-	Message   string          `json:"message,omitempty"`
+type TransactionInput struct {
+	TransactionID string          `json:"transactionID"`
+	OutputIndex   uint            `json:"outputIndex"`
+	Signature     string          `json:"signature"`
+	PublicKey     ecdsa.PublicKey `json:"publicKey"`
 }
 
-func NewTransaction(from string, to string, amount float64, publicKey ecdsa.PublicKey, msg ...string) (*Transaction, error) {
+type TransactionOutput struct {
+	Address string `json:"address"` // Recipient
+	Amount  uint64 `json:"amount"`
+}
+
+type Transaction struct {
+	Inputs  []TransactionInput  `json:"inputs"`
+	Outputs []TransactionOutput `json:"outputs"`
+	Message string              `json:"message,omitempty"`
+}
+
+func NewTransaction(senderAddress string, recipientAddress string, amount uint64, utxoSet *utxo.UTXOSet, senderPublicKey ecdsa.PublicKey, msg ...string) (*Transaction, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be positive")
 	}
 
-	if to == "" {
+	if recipientAddress == "" {
 		return nil, errors.New("recipient address cannot be empty")
+	}
+
+	if senderAddress == recipientAddress {
+		return nil, errors.New("sender and recipient cannot be the same")
 	}
 
 	var message string
@@ -33,17 +46,63 @@ func NewTransaction(from string, to string, amount float64, publicKey ecdsa.Publ
 		message = msg[0]
 	}
 
+	spendableUTXOs, err := utxoSet.FindSpendableUTXOsForAddress(senderAddress, amount)
+	if err != nil {
+		return nil, err
+	}
+
+	var spendableUTXOsAmount uint64 = 0
+	inputs := make([]TransactionInput, 0)
+	for _, u := range spendableUTXOs {
+		inputs = append(inputs, TransactionInput{
+			TransactionID: u.TransactionID,
+			OutputIndex:   u.OutputIndex,
+			PublicKey:     senderPublicKey,
+		})
+		spendableUTXOsAmount += u.Amount
+	}
+
+	outputs := make([]TransactionOutput, 0)
+	outputs = append(outputs, TransactionOutput{
+		Address: recipientAddress,
+		Amount:  amount,
+	})
+
+	if spendableUTXOsAmount > amount {
+		outputs = append(outputs, TransactionOutput{
+			Address: senderAddress,
+			Amount:  spendableUTXOsAmount - amount,
+		})
+	}
+
 	return &Transaction{
-		From:      from,
-		To:        to,
-		Amount:    uint64(amount * common.COINS_PER_UNIT),
-		Message:   message,
-		PublicKey: publicKey,
+		Inputs:  inputs,
+		Outputs: outputs,
+		Message: message,
 	}, nil
 }
 
+func NewCoinbaseTransaction(recipientAddress string, amount uint64) *Transaction {
+	return &Transaction{
+		Inputs: []TransactionInput{},
+		Outputs: []TransactionOutput{
+			{
+				Address: recipientAddress,
+				Amount:  amount,
+			},
+		},
+		Message: "Coinbase reward",
+	}
+}
+
 func (t *Transaction) GetHash() []byte {
-	data := fmt.Sprintf("%s%s%d", t.From, t.To, t.Amount)
+	var data string
+	for _, tx := range t.Inputs {
+		data = fmt.Sprintf("%s%s", data, tx.GetHash())
+	}
+	for _, tx := range t.Outputs {
+		data = fmt.Sprintf("%s%s", data, tx.GetHash())
+	}
 
 	hasher := sha256.New()
 	hasher.Write([]byte(data))
@@ -51,6 +110,38 @@ func (t *Transaction) GetHash() []byte {
 }
 
 func (t *Transaction) Print() string {
+	json, err := json.Marshal(t)
+	if err != nil {
+		// error
+	}
+
+	return fmt.Sprintf("%s\n", json)
+}
+
+func (t *TransactionInput) GetHash() []byte {
+	data := fmt.Sprintf("%s%d", t.TransactionID, t.OutputIndex)
+	hasher := sha256.New()
+	hasher.Write([]byte(data))
+	return hasher.Sum(nil)
+}
+
+func (t *TransactionInput) Print() string {
+	json, err := json.Marshal(t)
+	if err != nil {
+		// error
+	}
+
+	return fmt.Sprintf("%s\n", json)
+}
+
+func (t *TransactionOutput) GetHash() []byte {
+	data := fmt.Sprintf("%s%d", t.Address, t.Amount)
+	hasher := sha256.New()
+	hasher.Write([]byte(data))
+	return hasher.Sum(nil)
+}
+
+func (t *TransactionOutput) Print() string {
 	json, err := json.Marshal(t)
 	if err != nil {
 		// error

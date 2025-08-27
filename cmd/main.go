@@ -6,6 +6,7 @@ import (
 	"github.com/FilipeJohansson/go-coin/internal/blockchain"
 	"github.com/FilipeJohansson/go-coin/internal/transaction"
 	"github.com/FilipeJohansson/go-coin/internal/wallet"
+	"github.com/FilipeJohansson/go-coin/pkg/common"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 	blockchain := blockchain.NewBlockchain(wallet1.Address)
 	addTestTransactions(blockchain, wallet1, wallet2, wallet3)
 
-	fmt.Print(blockchain.Print())
+	fmt.Printf("[BLOCKCHAIN]\n%s", blockchain.Print())
 	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
 
 	checkWalletFunds(blockchain, wallet1.Address)
@@ -25,65 +26,75 @@ func main() {
 
 	addMaliciousChange(blockchain)
 
-	fmt.Print(blockchain.Print())
+	fmt.Printf("[BLOCKCHAIN]\n%s", blockchain.Print())
 	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
 }
 
 func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wallet, wallet2 *wallet.Wallet, wallet3 *wallet.Wallet) {
+	checkWalletFunds(blockchain, wallet1.Address)
 	tx, _ := wallet1.CreateTransaction(
 		wallet2.Address,
 		10,
+		blockchain.UTXOSet,
 		"To you, baby",
 	)
 	wallet1.SignTransaction(tx)
-	blockchain.AddTransaction(tx, *wallet1)
+	blockchain.AddTransaction(tx)
 	blockchain.MineBlock(wallet1.Address)
 
+	checkWalletFunds(blockchain, wallet2.Address)
 	tx, _ = wallet2.CreateTransaction(
 		wallet3.Address,
 		4.5,
+		blockchain.UTXOSet,
 		"That's your payment",
 	)
 	wallet2.SignTransaction(tx)
-	blockchain.AddTransaction(tx, *wallet2)
+	blockchain.AddTransaction(tx)
 	blockchain.MineBlock(wallet1.Address)
 
+	checkWalletFunds(blockchain, wallet3.Address)
 	tx, _ = wallet3.CreateTransaction(
 		wallet1.Address,
 		2,
+		blockchain.UTXOSet,
 	)
 	wallet3.SignTransaction(tx)
-	blockchain.AddTransaction(tx, *wallet3)
+	blockchain.AddTransaction(tx)
 	tx, _ = wallet3.CreateTransaction(
 		wallet2.Address,
 		1,
-		"Paying you that thing",
+		blockchain.UTXOSet,
+		"Paying you that thing (not signed)",
 	)
-	// wallet3.SignTransaction(tx)
-	blockchain.AddTransaction(tx, *wallet3)
-	blockchain.MineBlock(wallet1.Address)
+	// wallet3.SignTransaction(tx) <- its propositally commented so I can see the transaction being rejected
+	blockchain.AddTransaction(tx)
+	blockchain.MineBlock(wallet3.Address)
 
-	tx, _ = wallet3.CreateTransaction(
+	checkWalletFunds(blockchain, wallet3.Address)
+	tx, err := wallet3.CreateTransaction(
 		wallet2.Address,
 		10000,
+		blockchain.UTXOSet,
 		"Paying you that thing",
 	)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
 	wallet3.SignTransaction(tx)
-	blockchain.AddTransaction(tx, *wallet3)
+	blockchain.AddTransaction(tx)
 	blockchain.MineBlock(wallet1.Address)
 }
 
 func addMaliciousChange(blockchain *blockchain.Blockchain) {
-	for i, b := range blockchain.Blocks {
+	for i := range blockchain.Blocks {
 		if i == 1 {
-			txs := make([]*transaction.Transaction, 0)
-			txs = append(txs, &transaction.Transaction{
-				From:    "Anabela",
-				To:      "Filipe",
-				Amount:  5,
+			maliciousTx := &transaction.Transaction{
+				Inputs:  []transaction.TransactionInput{},
+				Outputs: []transaction.TransactionOutput{{Address: "Hacker", Amount: 1000000}},
 				Message: "I STOLE!",
-			})
-			b.Transactions = txs
+			}
+			blockchain.Blocks[1].Transactions = []*transaction.Transaction{maliciousTx}
 		}
 	}
 }
@@ -95,5 +106,5 @@ func createTestWallet() *wallet.Wallet {
 }
 
 func checkWalletFunds(blockchain *blockchain.Blockchain, address string) {
-	fmt.Printf("[%s] Funds: %d\n", address, blockchain.GetAddressFunds(address))
+	fmt.Printf("\n[%s] Funds: %.2f\n", address, float64(blockchain.UTXOSet.GetAddressBalance(address))/common.COINS_PER_UNIT)
 }
