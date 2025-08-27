@@ -112,6 +112,9 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 
 	transactions := bc.Mempool.GetTransactions()
 	for _, tx := range transactions {
+		if len(newBlock.Transactions) == 10 {
+			break
+		}
 		newBlock.AddTransaction(tx)
 	}
 
