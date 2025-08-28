@@ -11,6 +11,10 @@ import (
 const COINS_PER_UNIT = 1000000
 const MIN_FEE = 1000
 
+const INITIAL_DIFFICULTY = 2
+const TARGET_BLOCK_TIME = 3              // in seconds
+const DIFFICULTY_ADJUSTMENT_INTERVAL = 5 // each n blocks
+
 func GetAddressFromPublicKey(key ecdsa.PublicKey) string {
 	data := fmt.Sprintf("%s%s", key.X, key.Y)
 

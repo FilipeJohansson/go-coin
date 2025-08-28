@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/FilipeJohansson/go-coin/internal/block"
 	"github.com/FilipeJohansson/go-coin/internal/mempool"
@@ -133,7 +134,7 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 	coinbaseTx := bc.createCoinbaseTransaction(minerAddress, totalFees)
 	newBlock.Transactions = append([]*transaction.Transaction{coinbaseTx}, newBlock.Transactions...)
 
-	newBlock.Mine(2)
+	newBlock.Mine(bc.calculateDifficulty())
 	fmt.Printf("[NEW MINED BLOCK]\n%s", newBlock.Print())
 
 	for _, tx := range newBlock.Transactions {
@@ -262,5 +263,36 @@ func (bc *Blockchain) applyTransactionToUTXOSet(tx *transaction.Transaction, tem
 			Amount:        output.Amount,
 		}
 		tempUTXOSet.AddUTXO(newUTXO)
+	}
+}
+
+func (bc *Blockchain) calculateDifficulty() int {
+	if len(bc.Blocks) < common.DIFFICULTY_ADJUSTMENT_INTERVAL {
+		return common.INITIAL_DIFFICULTY
+	}
+
+	startIndex := len(bc.Blocks) - common.DIFFICULTY_ADJUSTMENT_INTERVAL
+	lastBlocks := bc.Blocks[startIndex:]
+
+	var totalTime time.Duration
+	for i := 1; i < len(lastBlocks); i++ {
+		blockTime := lastBlocks[i].Timestamp.Sub(lastBlocks[i-1].Timestamp)
+		totalTime += blockTime
+	}
+
+	avgTime := totalTime / time.Duration(len(lastBlocks)-1)
+
+	currentDifficulty := lastBlocks[len(lastBlocks)-1].Difficulty
+	targetTime := time.Duration(common.TARGET_BLOCK_TIME) * time.Second
+
+	if avgTime < targetTime {
+		return currentDifficulty + 1
+	} else if avgTime > targetTime {
+		if currentDifficulty > 1 {
+			return currentDifficulty - 1
+		}
+		return 1
+	} else {
+		return currentDifficulty
 	}
 }
