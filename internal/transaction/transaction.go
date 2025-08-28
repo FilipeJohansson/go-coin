@@ -25,10 +25,11 @@ type TransactionOutput struct {
 type Transaction struct {
 	Inputs  []TransactionInput  `json:"inputs"`
 	Outputs []TransactionOutput `json:"outputs"`
+	Fee     uint64              `json:"fee"`
 	Message string              `json:"message,omitempty"`
 }
 
-func NewTransaction(senderAddress string, recipientAddress string, amount uint64, utxoSet *utxo.UTXOSet, senderPublicKey ecdsa.PublicKey, msg ...string) (*Transaction, error) {
+func NewTransaction(senderAddress string, recipientAddress string, amount uint64, fee uint64, utxoSet *utxo.UTXOSet, senderPublicKey ecdsa.PublicKey, msg ...string) (*Transaction, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be positive")
 	}
@@ -46,7 +47,7 @@ func NewTransaction(senderAddress string, recipientAddress string, amount uint64
 		message = msg[0]
 	}
 
-	spendableUTXOs, err := utxoSet.FindSpendableUTXOsForAddress(senderAddress, amount)
+	spendableUTXOs, err := utxoSet.FindSpendableUTXOsForAddress(senderAddress, amount+fee)
 	if err != nil {
 		return nil, err
 	}
@@ -68,16 +69,17 @@ func NewTransaction(senderAddress string, recipientAddress string, amount uint64
 		Amount:  amount,
 	})
 
-	if spendableUTXOsAmount > amount {
+	if spendableUTXOsAmount > (amount + fee) {
 		outputs = append(outputs, TransactionOutput{
 			Address: senderAddress,
-			Amount:  spendableUTXOsAmount - amount,
+			Amount:  spendableUTXOsAmount - amount - fee,
 		})
 	}
 
 	return &Transaction{
 		Inputs:  inputs,
 		Outputs: outputs,
+		Fee:     fee,
 		Message: message,
 	}, nil
 }
@@ -103,7 +105,7 @@ func (t *Transaction) GetHash() []byte {
 	for _, tx := range t.Outputs {
 		data = fmt.Sprintf("%s%s", data, tx.GetHash())
 	}
-	data = fmt.Sprintf("%s%s", data, t.Message)
+	data = fmt.Sprintf("%s%s%d", data, t.Message, t.Fee)
 
 	hasher := sha256.New()
 	hasher.Write([]byte(data))

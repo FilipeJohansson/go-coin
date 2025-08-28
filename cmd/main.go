@@ -35,6 +35,7 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 	tx, _ := wallet1.CreateTransaction(
 		wallet2.Address,
 		10,
+		0.0015,
 		blockchain.UTXOSet,
 		"To you, baby",
 	)
@@ -46,6 +47,7 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 	tx, _ = wallet2.CreateTransaction(
 		wallet3.Address,
 		4.5,
+		0.0015,
 		blockchain.UTXOSet,
 		"That's your payment",
 	)
@@ -57,6 +59,7 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 	tx, _ = wallet3.CreateTransaction(
 		wallet1.Address,
 		2,
+		0.0015,
 		blockchain.UTXOSet,
 	)
 	wallet3.SignTransaction(tx)
@@ -64,6 +67,7 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 	tx, _ = wallet3.CreateTransaction(
 		wallet2.Address,
 		1,
+		0.0015,
 		blockchain.UTXOSet,
 		"Paying you that thing (not signed)",
 	)
@@ -75,6 +79,7 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 	tx, err := wallet3.CreateTransaction(
 		wallet2.Address,
 		10000,
+		0.0015,
 		blockchain.UTXOSet,
 		"Paying you that thing",
 	)

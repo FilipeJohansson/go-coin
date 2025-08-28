@@ -3,6 +3,7 @@ package blockchain
 import (
 	"encoding/hex"
 	"fmt"
+	"sort"
 
 	"github.com/FilipeJohansson/go-coin/internal/block"
 	"github.com/FilipeJohansson/go-coin/internal/mempool"
@@ -48,7 +49,13 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 	fmt.Printf("Message: %s\n", tx.Message)
 
 	if len(tx.Inputs) == 0 {
+		// Coinbase
 		bc.Mempool.AddTransaction(tx)
+		return
+	}
+
+	if tx.Fee < common.MIN_FEE {
+		// err
 		return
 	}
 
@@ -88,7 +95,7 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 		totalInputs += utxo.Amount
 	}
 
-	if totalInputs < totalOutputs {
+	if totalInputs < totalOutputs+tx.Fee {
 		fmt.Print("[INVALID] Insuficient funds\n")
 		return
 	}
@@ -110,15 +117,20 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 
 	newBlock := block.NewBlock(prevHash)
 
+	var totalFees uint64
 	transactions := bc.Mempool.GetTransactions()
+	sort.Slice(transactions, func(i, j int) bool {
+		return transactions[i].Fee > transactions[j].Fee
+	})
 	for _, tx := range transactions {
 		if len(newBlock.Transactions) == 10 {
 			break
 		}
 		newBlock.AddTransaction(tx)
+		totalFees += tx.Fee
 	}
 
-	coinbaseTx := bc.createCoinbaseTransaction(minerAddress)
+	coinbaseTx := bc.createCoinbaseTransaction(minerAddress, totalFees)
 	newBlock.Transactions = append([]*transaction.Transaction{coinbaseTx}, newBlock.Transactions...)
 
 	newBlock.Mine(2)
@@ -131,7 +143,6 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 	bc.Mempool.CleanProcessedTransactions(newBlock.Transactions)
 
 	bc.Blocks = append(bc.Blocks, newBlock)
-
 }
 
 func (bc *Blockchain) IsBlockchainValid() bool {
@@ -171,8 +182,8 @@ func (bc *Blockchain) Print() string {
 	return formattedBlockchain
 }
 
-func (bc *Blockchain) createCoinbaseTransaction(address string) *transaction.Transaction {
-	return transaction.NewCoinbaseTransaction(address, 50*common.COINS_PER_UNIT)
+func (bc *Blockchain) createCoinbaseTransaction(address string, totalFees uint64) *transaction.Transaction {
+	return transaction.NewCoinbaseTransaction(address, (50*common.COINS_PER_UNIT)+totalFees)
 }
 
 func (bc *Blockchain) updateUTXOSet(tx *transaction.Transaction) {
@@ -201,6 +212,10 @@ func (bc *Blockchain) validateTransactionInContext(tx *transaction.Transaction, 
 		return true
 	}
 
+	if tx.Fee < common.MIN_FEE {
+		return false
+	}
+
 	if !wallet.ValidateTransactionSignature(*tx) {
 		return false
 	}
@@ -226,7 +241,7 @@ func (bc *Blockchain) validateTransactionInContext(tx *transaction.Transaction, 
 		totalOutputs += output.Amount
 	}
 
-	if totalInputs < totalOutputs {
+	if totalInputs < totalOutputs+tx.Fee {
 		return false
 	}
 

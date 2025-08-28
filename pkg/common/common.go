@@ -9,6 +9,7 @@ import (
 )
 
 const COINS_PER_UNIT = 1000000
+const MIN_FEE = 1000
 
 func GetAddressFromPublicKey(key ecdsa.PublicKey) string {
 	data := fmt.Sprintf("%s%s", key.X, key.Y)

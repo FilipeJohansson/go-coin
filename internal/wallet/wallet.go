@@ -37,8 +37,11 @@ func NewWallet() *Wallet {
 	return wallet
 }
 
-func (w *Wallet) CreateTransaction(to string, amount float64, utxoSet *utxo.UTXOSet, msg ...string) (*transaction.Transaction, error) {
-	if amount <= 0 {
+func (w *Wallet) CreateTransaction(to string, amount float64, fee float64, utxoSet *utxo.UTXOSet, msg ...string) (*transaction.Transaction, error) {
+	uAmount := uint64(amount * common.COINS_PER_UNIT)
+	uFee := uint64(fee * common.COINS_PER_UNIT)
+
+	if uAmount <= 0 {
 		return nil, errors.New("amount must be positive")
 	}
 
@@ -46,12 +49,16 @@ func (w *Wallet) CreateTransaction(to string, amount float64, utxoSet *utxo.UTXO
 		return nil, errors.New("recipient address cannot be empty")
 	}
 
+	if uFee < common.MIN_FEE {
+		return nil, errors.New("fee less than min")
+	}
+
 	var message string
 	if len(msg) > 0 {
 		message = msg[0]
 	}
 
-	tx, err := transaction.NewTransaction(w.Address, to, uint64(amount*common.COINS_PER_UNIT), utxoSet, w.PublicKey, message)
+	tx, err := transaction.NewTransaction(w.Address, to, uAmount, uFee, utxoSet, w.PublicKey, message)
 	if err != nil {
 		return nil, err
 	}
