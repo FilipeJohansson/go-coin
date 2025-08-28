@@ -103,6 +103,7 @@ func (t *Transaction) GetHash() []byte {
 	for _, tx := range t.Outputs {
 		data = fmt.Sprintf("%s%s", data, tx.GetHash())
 	}
+	data = fmt.Sprintf("%s%s", data, t.Message)
 
 	hasher := sha256.New()
 	hasher.Write([]byte(data))
