@@ -1,8 +1,12 @@
 package blockchain
 
 import (
+	"crypto/elliptic"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -16,11 +20,21 @@ import (
 
 type Blockchain struct {
 	Blocks  []*block.Block   `json:"blocks"`
-	UTXOSet *utxo.UTXOSet    `json:"utxoSet"`
+	UTXOSet *utxo.UTXOSet    `json:"-"`
 	Mempool *mempool.Mempool `json:"mempool"`
 }
 
-func NewBlockchain(genesisWalletAddress string) *Blockchain {
+func NewBlockchain(genesisWalletAddress string, filename ...string) *Blockchain {
+	if len(filename) > 0 && filename[0] != "" {
+		blockchain, err := LoadFromFile(filename[0])
+		if err != nil {
+			// err
+		} else {
+			blockchain.fixPublicKeyCurves()
+			return blockchain
+		}
+	}
+
 	blockchain := &Blockchain{
 		UTXOSet: utxo.NewUTXOSet(),
 		Mempool: mempool.NewMempool(),
@@ -42,7 +56,7 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 	if len(tx.Inputs) == 0 {
 		from = "Coinbase"
 	} else {
-		from = common.GetAddressFromPublicKey(tx.Inputs[0].PublicKey)
+		from = common.GetAddressFromPublicKey(*tx.Inputs[0].PublicKey.GetPublicKey())
 	}
 
 	fmt.Printf("%s -> %s:\n", from, to)
@@ -174,6 +188,15 @@ func (bc *Blockchain) IsBlockchainValid() bool {
 	return true
 }
 
+func (bc *Blockchain) SaveToFile(filename string) error {
+	json, err := json.MarshalIndent(bc, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(filename, json, 0644)
+}
+
 func (bc *Blockchain) Print() string {
 	var formattedBlockchain string
 	for _, b := range bc.Blocks {
@@ -185,6 +208,15 @@ func (bc *Blockchain) Print() string {
 
 func (bc *Blockchain) createCoinbaseTransaction(address string, totalFees uint64) *transaction.Transaction {
 	return transaction.NewCoinbaseTransaction(address, (50*common.COINS_PER_UNIT)+totalFees)
+}
+
+func (bc *Blockchain) rebuildUTXOSet() {
+	bc.UTXOSet = utxo.NewUTXOSet()
+	for _, block := range bc.Blocks {
+		for _, tx := range block.Transactions {
+			bc.updateUTXOSet(tx)
+		}
+	}
 }
 
 func (bc *Blockchain) updateUTXOSet(tx *transaction.Transaction) {
@@ -229,7 +261,7 @@ func (bc *Blockchain) validateTransactionInContext(tx *transaction.Transaction, 
 
 		utxo := tempUTXOSet.GetUTXO(input.TransactionID, input.OutputIndex)
 
-		from := common.GetAddressFromPublicKey(input.PublicKey)
+		from := common.GetAddressFromPublicKey(*input.PublicKey.GetPublicKey())
 		if utxo.Address != from {
 			return false
 		}
@@ -295,4 +327,34 @@ func (bc *Blockchain) calculateDifficulty() int {
 	} else {
 		return currentDifficulty
 	}
+}
+
+func (bc *Blockchain) fixPublicKeyCurves() {
+	for _, block := range bc.Blocks {
+		for _, tx := range block.Transactions {
+			for i := range tx.Inputs {
+				tx.Inputs[i].PublicKey.Curve = elliptic.P256()
+			}
+		}
+	}
+}
+
+func LoadFromFile(filename string) (*Blockchain, error) {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var blockchain Blockchain
+	err = json.Unmarshal(content, &blockchain)
+	if err != nil {
+		return nil, err
+	}
+
+	blockchain.rebuildUTXOSet()
+	if !blockchain.IsBlockchainValid() {
+		return nil, errors.New("Blockchain saved is invalid")
+	}
+
+	return &blockchain, nil
 }

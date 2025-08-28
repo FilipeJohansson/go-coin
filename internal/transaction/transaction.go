@@ -2,19 +2,27 @@ package transaction
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/FilipeJohansson/go-coin/internal/utxo"
 )
+
+type CustomPublicKey struct {
+	Curve elliptic.Curve `json:"-"`
+	X     *big.Int       `json:"X"`
+	Y     *big.Int       `json:"Y"`
+}
 
 type TransactionInput struct {
 	TransactionID string          `json:"transactionID"`
 	OutputIndex   uint            `json:"outputIndex"`
 	Signature     string          `json:"signature"`
-	PublicKey     ecdsa.PublicKey `json:"publicKey"`
+	PublicKey     CustomPublicKey `json:"publicKey"`
 }
 
 type TransactionOutput struct {
@@ -58,7 +66,11 @@ func NewTransaction(senderAddress string, recipientAddress string, amount uint64
 		inputs = append(inputs, TransactionInput{
 			TransactionID: u.TransactionID,
 			OutputIndex:   u.OutputIndex,
-			PublicKey:     senderPublicKey,
+			PublicKey: CustomPublicKey{
+				Curve: senderPublicKey.Curve,
+				X:     senderPublicKey.X,
+				Y:     senderPublicKey.Y,
+			},
 		})
 		spendableUTXOsAmount += u.Amount
 	}
@@ -151,4 +163,12 @@ func (t *TransactionOutput) Print() string {
 	}
 
 	return fmt.Sprintf("%s\n", json)
+}
+
+func (c *CustomPublicKey) GetPublicKey() *ecdsa.PublicKey {
+	return &ecdsa.PublicKey{
+		Curve: c.Curve,
+		X:     c.X,
+		Y:     c.Y,
+	}
 }

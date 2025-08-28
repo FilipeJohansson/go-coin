@@ -110,7 +110,12 @@ func ValidateTransactionSignature(tx transaction.Transaction) bool {
 			return false
 		}
 
-		if !ecdsa.VerifyASN1(&i.PublicKey, i.GetHash(), signature) {
+		publicKey := ecdsa.PublicKey{
+			Curve: i.PublicKey.Curve,
+			X:     i.PublicKey.X,
+			Y:     i.PublicKey.Y,
+		}
+		if !ecdsa.VerifyASN1(&publicKey, i.GetHash(), signature) {
 			return false
 		}
 	}

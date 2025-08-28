@@ -14,7 +14,7 @@ func main() {
 	wallet2 := createTestWallet()
 	wallet3 := createTestWallet()
 
-	blockchain := blockchain.NewBlockchain(wallet1.Address)
+	blockchain := blockchain.NewBlockchain(wallet1.Address, "blockchain.json")
 	addTestTransactions(blockchain, wallet1, wallet2, wallet3)
 
 	fmt.Printf("[BLOCKCHAIN]\n%s", blockchain.Print())
@@ -28,6 +28,11 @@ func main() {
 
 	fmt.Printf("[BLOCKCHAIN]\n%s", blockchain.Print())
 	fmt.Printf("Is Blockchain valid: %t\n", blockchain.IsBlockchainValid())
+
+	err := blockchain.SaveToFile("blockchain.json")
+	if err != nil {
+		fmt.Printf("Error to save Blockchain: %v\n", err)
+	}
 }
 
 func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wallet, wallet2 *wallet.Wallet, wallet3 *wallet.Wallet) {
@@ -89,6 +94,19 @@ func addTestTransactions(blockchain *blockchain.Blockchain, wallet1 *wallet.Wall
 	wallet3.SignTransaction(tx)
 	blockchain.AddTransaction(tx)
 	blockchain.MineBlock(wallet1.Address)
+
+	tx, err = wallet3.CreateTransaction(
+		wallet2.Address,
+		10,
+		0.0015,
+		blockchain.UTXOSet,
+		"Paying you that thing",
+	)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+	wallet3.SignTransaction(tx)
+	blockchain.AddTransaction(tx)
 }
 
 func addMaliciousChange(blockchain *blockchain.Blockchain) {
