@@ -5,7 +5,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -25,6 +24,20 @@ func NewWallet() *Wallet {
 	if err != nil {
 		// err
 	}
+
+	publicKey := &privateKey.PublicKey
+
+	wallet := &Wallet{
+		PrivateKey: *privateKey,
+		PublicKey:  *publicKey,
+	}
+	wallet.GetAddress()
+
+	return wallet
+}
+
+func LoadWallet(hash string) *Wallet {
+	privateKey := common.GetPrivateKeyFromHash(hash)
 
 	publicKey := &privateKey.PublicKey
 
@@ -86,12 +99,13 @@ func (w *Wallet) GetAddress() string {
 }
 
 func (w *Wallet) Print() string {
-	json, err := json.Marshal(w)
-	if err != nil {
-		// error
-	}
+	content := common.BuildBox(
+		fmt.Sprintf("Public key: %s", common.GetPublicKeyHash(w.PublicKey)),
+		fmt.Sprintf("Private key: %s", common.GetPrivateKeyHash(w.PrivateKey)),
+		fmt.Sprintf("Address: %s", w.Address),
+	)
 
-	return fmt.Sprintf("%s\n", json)
+	return content
 }
 
 func ValidateTransactionSignature(tx transaction.Transaction) bool {
