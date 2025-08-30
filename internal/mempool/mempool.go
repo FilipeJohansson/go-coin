@@ -2,6 +2,7 @@ package mempool
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/FilipeJohansson/go-coin/internal/transaction"
 )
@@ -53,4 +54,14 @@ func (m *Mempool) Contains(tx *transaction.Transaction) bool {
 	}
 
 	return false
+}
+
+func (m *Mempool) Print() string {
+	var content string
+
+	for _, tx := range m.PendingTransactions {
+		content += fmt.Sprintf("===[ Pending Transaction ]===%s", tx.Print())
+	}
+
+	return content
 }

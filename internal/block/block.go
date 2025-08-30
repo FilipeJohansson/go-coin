@@ -86,16 +86,17 @@ func (b *Block) IsHashRight() bool {
 func (b *Block) FormatTransactions() string {
 	var formattedTransactions string
 	for _, t := range b.Transactions {
-		formattedTransactions += t.Print()
+		formattedTransactions += t.Json()
 	}
 
 	return formattedTransactions
 }
 
-func (b *Block) Print() string {
+func (b *Block) Json() string {
 	json, err := json.Marshal(b)
 	if err != nil {
 		// error
+		return ""
 	}
 
 	return fmt.Sprintf("%s\n", json)

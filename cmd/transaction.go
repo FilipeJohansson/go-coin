@@ -22,6 +22,13 @@ var sendCmd = &cobra.Command{
 	Run:     sendTransaction,
 }
 
+var listCmd = &cobra.Command{
+	Use:     "list",
+	Aliases: []string{"l"},
+	Short:   "List pending transactions",
+	Run:     listPendingTransactions,
+}
+
 func init() {
 	sendCmd.Flags().StringP("to", "t", "", "Recipient address")
 	sendCmd.Flags().StringP("private-key", "p", "", "The from address private key to autenticate")
@@ -30,6 +37,7 @@ func init() {
 	sendCmd.Flags().StringP("message", "m", "", "Optional message")
 
 	transactionCmd.AddCommand(sendCmd)
+	transactionCmd.AddCommand(listCmd)
 
 	rootCmd.AddCommand(transactionCmd)
 }
@@ -73,4 +81,9 @@ func sendTransaction(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Printf("Error to save Blockchain: %v\n", err)
 	}
+}
+
+func listPendingTransactions(cmd *cobra.Command, args []string) {
+	blockchain := blockchain.NewBlockchain("", blockchainFile)
+	fmt.Println(blockchain.Mempool.Print())
 }

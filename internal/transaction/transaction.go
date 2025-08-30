@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/FilipeJohansson/go-coin/internal/utxo"
+	"github.com/FilipeJohansson/go-coin/pkg/common"
 )
 
 type CustomPublicKey struct {
@@ -124,13 +125,34 @@ func (t *Transaction) GetHash() []byte {
 	return hasher.Sum(nil)
 }
 
-func (t *Transaction) Print() string {
+func (t *Transaction) Json() string {
 	json, err := json.Marshal(t)
 	if err != nil {
 		// error
+		return ""
 	}
 
 	return fmt.Sprintf("%s\n", json)
+}
+
+func (t *Transaction) Print() string {
+	var inputs string
+	for _, i := range t.Inputs {
+		inputs += fmt.Sprintf("%s", i.Print())
+	}
+
+	var outputs string
+	for _, o := range t.Outputs {
+		outputs += fmt.Sprintf("%s", o.Print())
+	}
+
+	return fmt.Sprintf(`
+Fee: %d
+Message: %s
+Inputs:
+%s
+Outputs:
+%s`, t.Fee, t.Message, inputs, outputs)
 }
 
 func (t *TransactionInput) GetHash() []byte {
@@ -140,13 +162,22 @@ func (t *TransactionInput) GetHash() []byte {
 	return hasher.Sum(nil)
 }
 
-func (t *TransactionInput) Print() string {
+func (t *TransactionInput) Json() string {
 	json, err := json.Marshal(t)
 	if err != nil {
 		// error
 	}
 
 	return fmt.Sprintf("%s\n", json)
+}
+
+func (t *TransactionInput) Print() string {
+	return common.BuildBox(
+		fmt.Sprintf("Transaction ID: %s", t.TransactionID),
+		fmt.Sprintf("Output Index:   %d", t.OutputIndex),
+		fmt.Sprintf("Public Key:     %s", common.GetAddressFromPublicKey(*t.PublicKey.GetPublicKey())),
+		fmt.Sprintf("Signature:      %s", t.Signature),
+	)
 }
 
 func (t *TransactionOutput) GetHash() []byte {
@@ -156,13 +187,20 @@ func (t *TransactionOutput) GetHash() []byte {
 	return hasher.Sum(nil)
 }
 
-func (t *TransactionOutput) Print() string {
+func (t *TransactionOutput) Json() string {
 	json, err := json.Marshal(t)
 	if err != nil {
 		// error
 	}
 
 	return fmt.Sprintf("%s\n", json)
+}
+
+func (t *TransactionOutput) Print() string {
+	return common.BuildBox(
+		fmt.Sprintf("Address: %s", t.Address),
+		fmt.Sprintf("Amount:  %d", t.Amount),
+	)
 }
 
 func (c *CustomPublicKey) GetPublicKey() *ecdsa.PublicKey {

@@ -158,7 +158,7 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 	newBlock.Transactions = append([]*transaction.Transaction{coinbaseTx}, newBlock.Transactions...)
 
 	newBlock.Mine(bc.calculateDifficulty())
-	fmt.Printf("[NEW MINED BLOCK]\n%s", newBlock.Print())
+	fmt.Printf("[NEW MINED BLOCK]\n%s", newBlock.Json())
 
 	bc.Blocks = append(bc.Blocks, newBlock)
 
@@ -209,7 +209,7 @@ func (bc *Blockchain) SaveToFile(filename string) error {
 func (bc *Blockchain) Print() string {
 	var formattedBlockchain string
 	for _, b := range bc.Blocks {
-		formattedBlockchain += b.Print()
+		formattedBlockchain += b.Json()
 	}
 
 	return formattedBlockchain
