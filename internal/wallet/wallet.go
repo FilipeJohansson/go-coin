@@ -36,6 +36,7 @@ func NewWallet() *Wallet {
 	return wallet
 }
 
+// Load a wallet from the Base58 private key
 func LoadWallet(hash string) *Wallet {
 	privateKey := common.GetPrivateKeyFromHash(hash)
 

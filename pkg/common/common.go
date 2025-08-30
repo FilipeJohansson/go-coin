@@ -41,7 +41,7 @@ func GetPublicKeyHash(key ecdsa.PublicKey) string {
 }
 
 func GetPrivateKeyHash(key ecdsa.PrivateKey) string {
-	return base58.Encode([]byte(key.D.Bytes()))
+	return base58.Encode(key.D.Bytes())
 }
 
 func GetPrivateKeyFromHash(encoded string) *ecdsa.PrivateKey {
@@ -50,9 +50,15 @@ func GetPrivateKeyFromHash(encoded string) *ecdsa.PrivateKey {
 		return nil
 	}
 
-	d := new(big.Int).SetBytes(decoded)
+	if len(decoded) < 32 {
+		padded := make([]byte, 32)
+		copy(padded[32-len(decoded):], decoded)
+		decoded = padded
+	}
 
+	d := new(big.Int).SetBytes(decoded)
 	curve := elliptic.P256()
+
 	privateKey := &ecdsa.PrivateKey{
 		D: d,
 		PublicKey: ecdsa.PublicKey{

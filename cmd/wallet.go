@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/FilipeJohansson/go-coin/internal/blockchain"
 	"github.com/FilipeJohansson/go-coin/internal/wallet"
+	"github.com/FilipeJohansson/go-coin/pkg/common"
 	"github.com/spf13/cobra"
 )
 
@@ -21,10 +23,29 @@ var createWalletCmd = &cobra.Command{
 	Run:   createWallet,
 }
 
+var loadWalletCmd = &cobra.Command{
+	Use:   "load",
+	Short: "Load a wallet",
+	Long:  `Load a wallet passing the public and the private key`,
+	Run:   loadWallet,
+}
+
+var balanceCmd = &cobra.Command{
+	Use:   "balance",
+	Short: "See the balance from a wallet",
+	Run:   getWalletBalance,
+}
+
 func init() {
 	walletCmd.AddCommand(createWalletCmd)
 	createWalletCmd.Flags().StringP("name", "n", "", "Name your wallet")
 	createWalletCmd.Flags().BoolP("save", "s", false, "Save the wallet in a file")
+
+	walletCmd.AddCommand(loadWalletCmd)
+	loadWalletCmd.Flags().StringP("key", "k", "", "Your wallet private key")
+
+	walletCmd.AddCommand(balanceCmd)
+	balanceCmd.Flags().StringP("address", "a", "", "Wallet address to check balance")
 
 	rootCmd.AddCommand(walletCmd)
 }
@@ -56,4 +77,28 @@ func createWallet(cmd *cobra.Command, args []string) {
 
 		fmt.Println("Wallet saved to wallet.txt")
 	}
+}
+
+func loadWallet(cmd *cobra.Command, args []string) {
+	privateKey, err := cmd.Flags().GetString("key")
+	if err != nil {
+		// err
+		return
+	}
+
+	wallet := wallet.LoadWallet(privateKey)
+
+	fmt.Printf("Wallet loaded:\n%s", wallet.Print())
+}
+
+func getWalletBalance(cmd *cobra.Command, args []string) {
+	address, _ := cmd.Flags().GetString("address")
+
+	if address == "" {
+		fmt.Println("Error: address is required")
+		return
+	}
+
+	blockchain := blockchain.NewBlockchain("", blockchainFile)
+	fmt.Printf("Wallet balance: %.2f", (float64(blockchain.UTXOSet.GetAddressBalance(address)) / common.COINS_PER_UNIT))
 }
