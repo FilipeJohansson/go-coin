@@ -139,6 +139,9 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 	sort.Slice(transactions, func(i, j int) bool {
 		return transactions[i].Fee > transactions[j].Fee
 	})
+
+	// Select transactions for the block
+	selectedTransactions := 0
 	for _, tx := range transactions {
 		if len(newBlock.Transactions) == common.MAX_TXS_PER_BLOCK {
 			break
@@ -149,16 +152,32 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 		}
 
 		bc.markUTXOsAsUsed(tx, usedUTXOs)
-
 		newBlock.AddTransaction(tx)
 		totalFees += tx.Fee
+		selectedTransactions++
 	}
 
+	// Create and add coinbase transaction
 	coinbaseTx := bc.createCoinbaseTransaction(minerAddress, totalFees)
 	newBlock.Transactions = append([]*transaction.Transaction{coinbaseTx}, newBlock.Transactions...)
 
-	newBlock.Mine(bc.calculateDifficulty())
-	fmt.Printf("[NEW MINED BLOCK]\n%s", newBlock.Json())
+	// Calculate difficulty and mine
+	difficulty := bc.calculateDifficulty()
+
+	if selectedTransactions > 0 {
+		fmt.Printf("Mining block with %d transactions (difficulty: %d)...", selectedTransactions, difficulty)
+	}
+
+	startTime := time.Now()
+	newBlock.Mine(difficulty)
+	miningTime := time.Since(startTime)
+
+	if selectedTransactions > 0 {
+		fmt.Printf(" ✓ Block mined in %v\n", miningTime)
+		fmt.Printf("Block hash: %s\n", newBlock.BlockHash)
+		fmt.Printf("Nonce: %d\n", newBlock.Nonce)
+		fmt.Printf("Total fees collected: %.7f coins\n", float64(totalFees)/common.COINS_PER_UNIT)
+	}
 
 	bc.Blocks = append(bc.Blocks, newBlock)
 
@@ -166,6 +185,7 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 		bc.updateUTXOSet(tx)
 	}
 
+	// Clean processed transactions from mempool
 	bc.Mempool.CleanProcessedTransactions(newBlock.Transactions)
 }
 
