@@ -105,5 +105,5 @@ func getWalletBalance(cmd *cobra.Command, args []string) {
 	}
 
 	blockchain := blockchain.NewBlockchain("", blockchainFile)
-	fmt.Printf("Wallet balance: %.2f", (float64(blockchain.UTXOSet.GetAddressBalance(address)) / common.COINS_PER_UNIT))
+	fmt.Printf("Wallet balance: %.7f", (float64(blockchain.UTXOSet.GetAddressBalance(address)) / common.COINS_PER_UNIT))
 }

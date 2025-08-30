@@ -20,7 +20,17 @@ var validateCmd = &cobra.Command{
 	Run:     validateBlockchain,
 }
 
+var mineCmd = &cobra.Command{
+	Use:     "mine",
+	Aliases: []string{"m"},
+	Short:   "Mine a new block",
+	Run:     mineBlock,
+}
+
 func init() {
+	mineCmd.Flags().StringP("miner", "m", "", "Wallet address to receive coinbase")
+
+	blockchainCmd.AddCommand(mineCmd)
 	blockchainCmd.AddCommand(validateCmd)
 
 	rootCmd.AddCommand(blockchainCmd)
@@ -29,4 +39,21 @@ func init() {
 func validateBlockchain(cmd *cobra.Command, args []string) {
 	blockchain := blockchain.NewBlockchain("", blockchainFile)
 	fmt.Printf("Is Blockchain valid: %t", blockchain.IsBlockchainValid())
+}
+
+func mineBlock(cmd *cobra.Command, args []string) {
+	minerAddress, _ := cmd.Flags().GetString("miner")
+	if minerAddress == "" {
+		// err
+		return
+	}
+
+	blockchain := blockchain.NewBlockchain("", blockchainFile)
+	if len(blockchain.Mempool.PendingTransactions) < 1 {
+		fmt.Println("No transactions pending")
+		return
+	}
+
+	blockchain.MineBlock(minerAddress)
+	blockchain.SaveToFile(blockchainFile)
 }
