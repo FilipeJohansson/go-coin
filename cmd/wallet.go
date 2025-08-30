@@ -11,41 +11,46 @@ import (
 )
 
 var walletCmd = &cobra.Command{
-	Use:   "wallet",
-	Short: "Wallet operations",
-	Long:  "Create and manage wallets",
+	Use:     "wallet",
+	Aliases: []string{"w"},
+	Short:   "Wallet operations",
+	Long:    "Create and manage wallets",
 }
 
 var createWalletCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create a new wallet",
-	Long:  `Create a new public and private key`,
-	Run:   createWallet,
+	Use:     "create",
+	Aliases: []string{"c"},
+	Short:   "Create a new wallet",
+	Long:    `Create a new public and private key`,
+	Run:     createWallet,
 }
 
 var loadWalletCmd = &cobra.Command{
-	Use:   "load",
-	Short: "Load a wallet",
-	Long:  `Load a wallet passing the public and the private key`,
-	Run:   loadWallet,
+	Use:     "load",
+	Aliases: []string{"l"},
+	Short:   "Load a wallet",
+	Long:    `Load a wallet passing the public and the private key`,
+	Run:     loadWallet,
 }
 
 var balanceCmd = &cobra.Command{
-	Use:   "balance",
-	Short: "See the balance from a wallet",
-	Run:   getWalletBalance,
+	Use:     "balance",
+	Aliases: []string{"b"},
+	Short:   "See the balance from a wallet",
+	Run:     getWalletBalance,
 }
 
 func init() {
-	walletCmd.AddCommand(createWalletCmd)
 	createWalletCmd.Flags().StringP("name", "n", "", "Name your wallet")
 	createWalletCmd.Flags().BoolP("save", "s", false, "Save the wallet in a file")
 
-	walletCmd.AddCommand(loadWalletCmd)
 	loadWalletCmd.Flags().StringP("key", "k", "", "Your wallet private key")
 
-	walletCmd.AddCommand(balanceCmd)
 	balanceCmd.Flags().StringP("address", "a", "", "Wallet address to check balance")
+
+	walletCmd.AddCommand(createWalletCmd)
+	walletCmd.AddCommand(loadWalletCmd)
+	walletCmd.AddCommand(balanceCmd)
 
 	rootCmd.AddCommand(walletCmd)
 }
