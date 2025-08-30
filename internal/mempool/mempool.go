@@ -58,9 +58,8 @@ func (m *Mempool) Contains(tx *transaction.Transaction) bool {
 
 func (m *Mempool) Print() string {
 	var content string
-
-	for _, tx := range m.PendingTransactions {
-		content += fmt.Sprintf("===[ Pending Transaction ]===%s", tx.Print())
+	for i, tx := range m.PendingTransactions {
+		content += fmt.Sprintf("===[ Pending Transaction %d ]===%s", i, tx.Print())
 	}
 
 	return content

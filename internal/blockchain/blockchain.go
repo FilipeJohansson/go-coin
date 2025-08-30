@@ -206,13 +206,22 @@ func (bc *Blockchain) SaveToFile(filename string) error {
 	return os.WriteFile(filename, json, 0644)
 }
 
-func (bc *Blockchain) Print() string {
+func (bc *Blockchain) Json() string {
 	var formattedBlockchain string
 	for _, b := range bc.Blocks {
 		formattedBlockchain += b.Json()
 	}
 
 	return formattedBlockchain
+}
+
+func (bc *Blockchain) Print() string {
+	var content string
+	for i, b := range bc.Blocks {
+		content += fmt.Sprintf("===[ Block %d ]===%s", i, b.Print())
+	}
+
+	return content
 }
 
 func (bc *Blockchain) createCoinbaseTransaction(address string, totalFees uint64) *transaction.Transaction {

@@ -101,3 +101,20 @@ func (b *Block) Json() string {
 
 	return fmt.Sprintf("%s\n", json)
 }
+
+func (b *Block) Print() string {
+	var txsStr string
+	for i, tx := range b.Transactions {
+		txsStr += fmt.Sprintf("===[ Transaction %d ]===%s", i, tx.Print())
+	}
+
+	return fmt.Sprintf(`
+Hash: %s
+Prev Block hash: %s
+Timestamp: %s
+Message: %s
+Difficulty: %d
+Nonce: %d
+Transactions:
+%s`, b.BlockHash, b.PrevBlockHash, b.Timestamp, b.Message, b.Difficulty, b.Nonce, txsStr)
+}

@@ -27,11 +27,19 @@ var mineCmd = &cobra.Command{
 	Run:     mineBlock,
 }
 
+var blocksCmd = &cobra.Command{
+	Use:     "blocks",
+	Aliases: []string{"b"},
+	Short:   "List all the blocks",
+	Run:     listBlocks,
+}
+
 func init() {
 	mineCmd.Flags().StringP("miner", "m", "", "Wallet address to receive coinbase")
 
 	blockchainCmd.AddCommand(mineCmd)
 	blockchainCmd.AddCommand(validateCmd)
+	blockchainCmd.AddCommand(blocksCmd)
 
 	rootCmd.AddCommand(blockchainCmd)
 }
@@ -56,4 +64,9 @@ func mineBlock(cmd *cobra.Command, args []string) {
 
 	blockchain.MineBlock(minerAddress)
 	blockchain.SaveToFile(blockchainFile)
+}
+
+func listBlocks(cmd *cobra.Command, args []string) {
+	blockchain := blockchain.NewBlockchain("", blockchainFile)
+	fmt.Println(blockchain.Print())
 }
