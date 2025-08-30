@@ -140,7 +140,7 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 		return transactions[i].Fee > transactions[j].Fee
 	})
 	for _, tx := range transactions {
-		if len(newBlock.Transactions) == 10 {
+		if len(newBlock.Transactions) == common.MAX_TXS_PER_BLOCK {
 			break
 		}
 
