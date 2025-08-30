@@ -30,7 +30,6 @@ func NewBlockchain(genesisWalletAddress string, filename ...string) *Blockchain 
 		if err != nil {
 			// err
 		} else {
-			blockchain.fixPublicKeyCurves()
 			return blockchain
 		}
 	}
@@ -352,6 +351,8 @@ func LoadFromFile(filename string) (*Blockchain, error) {
 	}
 
 	blockchain.rebuildUTXOSet()
+	blockchain.fixPublicKeyCurves()
+
 	if !blockchain.IsBlockchainValid() {
 		return nil, errors.New("Blockchain saved is invalid")
 	}
