@@ -44,7 +44,7 @@ func init() {
 	createWalletCmd.Flags().StringP("name", "n", "", "Name your wallet")
 	createWalletCmd.Flags().BoolP("save", "s", false, "Save the wallet in a file")
 
-	loadWalletCmd.Flags().StringP("key", "k", "", "Your wallet private key")
+	loadWalletCmd.Flags().StringP("private-key", "p", "", "Your wallet private key")
 
 	balanceCmd.Flags().StringP("address", "a", "", "Wallet address to check balance")
 
@@ -85,7 +85,7 @@ func createWallet(cmd *cobra.Command, args []string) {
 }
 
 func loadWallet(cmd *cobra.Command, args []string) {
-	privateKey, err := cmd.Flags().GetString("key")
+	privateKey, err := cmd.Flags().GetString("private-key")
 	if err != nil {
 		// err
 		return
