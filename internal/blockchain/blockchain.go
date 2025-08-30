@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/FilipeJohansson/go-coin/internal/block"
@@ -59,7 +60,7 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 	}
 
 	fmt.Printf("%s -> %s:\n", from, to)
-	fmt.Printf("Amount: %.2f\n", amount)
+	fmt.Printf("Amount: %.7f\n", amount)
 	fmt.Printf("Message: %s\n", tx.Message)
 
 	if len(tx.Inputs) == 0 {
@@ -79,7 +80,7 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 	}
 
 	if amount <= 0 {
-		fmt.Printf("[INVALID] Invalid amount: %.2f\n", amount)
+		fmt.Printf("[INVALID] Invalid amount: %.7f\n", amount)
 		return
 	}
 
@@ -114,7 +115,7 @@ func (bc *Blockchain) AddTransaction(tx *transaction.Transaction) {
 		return
 	}
 
-	fmt.Printf("[VALID] %s -> %s: %.2f\n", from, to, amount)
+	fmt.Printf("[VALID] %s -> %s: %.7f\n", from, to, amount)
 
 	bc.Mempool.AddTransaction(tx)
 }
@@ -131,6 +132,8 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 
 	newBlock := block.NewBlock(prevHash)
 
+	usedUTXOs := make(map[string]bool)
+
 	var totalFees uint64
 	transactions := bc.Mempool.GetTransactions()
 	sort.Slice(transactions, func(i, j int) bool {
@@ -140,6 +143,13 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 		if len(newBlock.Transactions) == 10 {
 			break
 		}
+
+		if bc.hasConflictingInputs(tx, usedUTXOs) {
+			continue
+		}
+
+		bc.markUTXOsAsUsed(tx, usedUTXOs)
+
 		newBlock.AddTransaction(tx)
 		totalFees += tx.Fee
 	}
@@ -150,13 +160,13 @@ func (bc *Blockchain) MineBlock(minerAddress string) {
 	newBlock.Mine(bc.calculateDifficulty())
 	fmt.Printf("[NEW MINED BLOCK]\n%s", newBlock.Print())
 
+	bc.Blocks = append(bc.Blocks, newBlock)
+
 	for _, tx := range newBlock.Transactions {
 		bc.updateUTXOSet(tx)
 	}
 
 	bc.Mempool.CleanProcessedTransactions(newBlock.Transactions)
-
-	bc.Blocks = append(bc.Blocks, newBlock)
 }
 
 func (bc *Blockchain) IsBlockchainValid() bool {
@@ -294,6 +304,23 @@ func (bc *Blockchain) applyTransactionToUTXOSet(tx *transaction.Transaction, tem
 			Amount:        output.Amount,
 		}
 		tempUTXOSet.AddUTXO(newUTXO)
+	}
+}
+
+func (bc *Blockchain) hasConflictingInputs(tx *transaction.Transaction, usedUTXOs map[string]bool) bool {
+	for _, input := range tx.Inputs {
+		key := input.TransactionID + ":" + strconv.Itoa(int(input.OutputIndex))
+		if usedUTXOs[key] {
+			return true
+		}
+	}
+	return false
+}
+
+func (bc *Blockchain) markUTXOsAsUsed(tx *transaction.Transaction, usedUTXOs map[string]bool) {
+	for _, input := range tx.Inputs {
+		key := input.TransactionID + ":" + strconv.Itoa(int(input.OutputIndex))
+		usedUTXOs[key] = true
 	}
 }
 
